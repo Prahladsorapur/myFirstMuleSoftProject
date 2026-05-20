@@ -1,0 +1,9 @@
+{
+
+  "status": "Failed",
+  "statusCode": 400,
+  "eventId": "982390eu92rhdfo02380",
+  "externalId": "123456210829Abhi",
+  "errorType": "HTTP:BAD_REQUEST",
+  "errorDescription": "bad request"
+}

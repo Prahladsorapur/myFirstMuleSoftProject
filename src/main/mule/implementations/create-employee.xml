@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
+	<flow name="post:\create-employee:employee-db-system-api-config" doc:id="5a7fe73d-1e9c-4030-82a8-f3d1bc2d0aab" >
+		<ee:transform doc:name="Set Input Request and CorrelationId" doc:id="3e1ac54d-4471-4d6e-8b5a-530442212483">
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+			<ee:variables>
+				<ee:set-variable variableName="correlationId"><![CDATA[uuid()]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<logger level="INFO" doc:name="Start Logger" doc:id="27b88f61-d019-4b1b-820d-d0de1cc3d29d" message='#[%dw 2.0&#10;output application/json&#10;---&#10;{&#10;	"flowName": flow.name,&#10;	"timestamp": now() &gt;&gt; "UTC",&#10;	"correlationId": vars.correlationId,&#10;	"status": "Received request to create employee records in DB"&#10;}]' />
+		<ee:transform doc:name="mapping" doc:id="5fd3df62-d356-47b1-b158-77078419a81c" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+payload map (item) -> {
+    emp_id: item.empId,
+    first_name: item.firstName,
+    last_name: item.lastName,
+    email_id: item.emailId,
+    date_of_joining: item.dateOfJoining as Date {format: "yyyy-MM-dd"},
+    address: item.address
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<try doc:name="Try" doc:id="a6a2ea2f-87bd-4a78-96c4-bfe3aff76aed" >
+			<until-successful maxRetries="${us.maxRetries}" doc:name="Until Successful" doc:id="a45167d0-2a07-44e1-9ded-585cc0379c44" millisBetweenRetries="${us.millisBetweenRetries}">
+			<db:bulk-insert doc:name="Bulk Insert using Database Connector" doc:id="8630dbb8-2b7f-4c92-bd72-5f1af1075ac0" config-ref="Database_Config">
+			<db:sql><![CDATA[INSERT INTO first_project.employee values(:emp_id, :first_name, :last_name, :email_id, :date_of_joining, :address) 
+
+]]></db:sql>
+		</db:bulk-insert>
+		</until-successful>
+			<error-handler >
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="01eb9d93-b739-4493-bdfb-c9866040f771" type="MULE:RETRY_EXHAUSTED" >
+					<ee:transform doc:name="Transform Message" doc:id="69cfa8fe-7b28-4a2a-b880-48b43f8c95f1" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+
+var resolvedErrorType =
+    if ((error.suppressedErrors.errorType[0] default null) != null)
+        error.suppressedErrors.errorType[0].namespace ++ ":" ++ error.suppressedErrors.errorType[0].identifier
+    else
+        error.errorType.namespace ++ ":" ++ error.errorType.identifier
+
+---
+{
+  status: "FAILED",
+  errorType: resolvedErrorType,
+  message:
+    if (resolvedErrorType == "DB:CONNECTIVITY") "Database connectivity failed"
+    else if (resolvedErrorType == "DB:BAD_SQL_SYNTAX") "Invalid SQL syntax"
+    else if (resolvedErrorType == "DB:QUERY_EXECUTION") "Database query execution failed"
+    else "Unknown error",
+  timestamp: now() as String
+}]]></ee:set-payload>
+						</ee:message>
+						<ee:variables />
+					</ee:transform>
+				</on-error-propagate>
+			</error-handler>
+		</try>
+		<ee:transform doc:name="Response" doc:id="5b80b39f-d243-4abc-aa41-95cfd00220b7" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+  status: "Success",
+  message: "Employee record created successfully"
+} ]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Response Logger" doc:id="f4500661-6917-4d8d-8938-16e980bdeb22" message='#[%dw 2.0&#10;output application/json&#10;---&#10;{&#10;	"flowName": flow.name,&#10;	"timestamp": now() &gt;&gt; "UTC",&#10;	"correlationId": vars.correlationId,&#10;	"status": payload,&#10;	&#10;}]' />
+	</flow>
+</mule>

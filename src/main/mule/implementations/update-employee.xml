@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
+	<flow name="patch:\update-employee\(empId):application\json:employee-db-system-api-config" doc:id="12734595-0000-43d6-9cfa-32fcda482421" >
+		<ee:transform doc:name="Set Input Request and CorrelationId" doc:id="84652c04-f2b1-4de1-8773-cbfb85e8a23c">
+			<ee:message>
+			</ee:message>
+			<ee:variables>
+				<ee:set-variable variableName="correlationId"><![CDATA[uuid()]]></ee:set-variable>
+				<ee:set-variable variableName="emp_id" ><![CDATA[attributes.uriParams.'empId']]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<logger level="INFO" doc:name="Start Logger" doc:id="fa8e480d-b64a-4f35-bb6c-aa382be85ec9" message='#[%dw 2.0&#10;output application/json&#10;---&#10;{&#10;	"flowName": flow.name,&#10;	"timestamp": now() &gt;&gt; "UTC",&#10;	"correlationId": vars.correlationId,&#10;	"status": "Received request to update employee records by empid"&#10;}]' />
+		<ee:transform doc:name="mapping" doc:id="6d3da4a9-fcac-4418-b364-5620f0c86943">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+var employee = (payload filter (item) -> item.empId == vars.emp_id)[0]
+---
+{
+    first_name: employee.firstName default null,
+    last_name: employee.lastName default null,
+    email_id: employee.emailId default null,
+    date_of_joining: employee.dateOfJoining default null,
+    address: employee.address default null,
+    emp_id: employee.empId 
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<try doc:name="Try" doc:id="8cb8a1d9-f313-4c02-a760-4db172a9054e" >
+			<until-successful maxRetries="${us.maxRetries}" doc:name="Until Successful" doc:id="a1a74728-04be-47ca-af4d-c35ddccafe45" millisBetweenRetries="${us.millisBetweenRetries}">
+			<db:bulk-update doc:name="Bulk Update using Database Connector" doc:id="bde37600-5071-4a15-bdc1-faf85c4e663c" config-ref="Database_Config">
+			<db:bulk-input-parameters><![CDATA[#[[payload]]]]></db:bulk-input-parameters>
+			<db:sql><![CDATA[UPDATE first_project.employee 
+SET first_name = COALESCE(:first_name, first_name), 
+    last_name = COALESCE(:last_name, last_name), 
+    email_id = COALESCE(:email_id, email_id), 
+    date_of_joining = COALESCE(:date_of_joining, date_of_joining), 
+    address = COALESCE(:address, address) 
+WHERE emp_id = :emp_id
+]]></db:sql>
+		</db:bulk-update>
+		</until-successful>
+			<error-handler >
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="fc25e48d-2d9c-44fd-88ff-df29324867b9" type="MULE:RETRY_EXHAUSTED" >
+					<ee:transform doc:name="Transform Message" doc:id="df39e778-de4f-4d39-a06d-6ebcd00cc499" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+
+var resolvedErrorType =
+    if ((error.suppressedErrors.errorType[0] default null) != null)
+        error.suppressedErrors.errorType[0].namespace ++ ":" ++ error.suppressedErrors.errorType[0].identifier
+    else
+        error.errorType.namespace ++ ":" ++ error.errorType.identifier
+
+---
+{
+  status: "FAILED",
+  errorType: resolvedErrorType,
+  message:
+    if (resolvedErrorType == "DB:CONNECTIVITY") "Database connectivity failed"
+    else if (resolvedErrorType == "DB:BAD_SQL_SYNTAX") "Invalid SQL syntax"
+    else if (resolvedErrorType == "DB:QUERY_EXECUTION") "Database query execution failed"
+    else "Unknown error",
+  timestamp: now() as String
+}]]></ee:set-payload>
+						</ee:message>
+						<ee:variables />
+					</ee:transform>
+				</on-error-propagate>
+			</error-handler>
+		</try>
+		<ee:transform doc:name="Response" doc:id="cf227371-6700-44fd-996d-0e03cdc3bacd" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+  status: "Success",
+  message: "Employee record Updated successfully"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Response Logger" doc:id="99ebf6fe-da36-467e-9f48-f0be690d061c" message='#[%dw 2.0&#10;output application/json&#10;---&#10;{&#10;	"flowName": flow.name,&#10;	"timestamp": now() &gt;&gt; "UTC",&#10;	"correlationId": vars.correlationId,&#10;	"status": payload,&#10;	&#10;}]' />
+	</flow>
+</mule>

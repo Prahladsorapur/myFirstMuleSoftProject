@@ -1,0 +1,45 @@
+# listnerDetails
+http:
+    path: "/*"
+    port: "8081"
+    host: "0.0.0.0"
+    connectionIdleTimeOut: "60000"
+    responseTimeOut: "40000"
+    maxConnections: "-1"
+    inMemorySize: "1024"
+    
+api:
+    autodiscoveryID: ""
+    name: "employee-db-system-api"
+    layer: "system"
+# environment
+env: "dev"    
+
+# Database Configuration 
+db:
+  host: "127.0.0.1"
+  port: "3306"
+  username: "root"
+  database: first_project
+  
+# VM Configuration  
+vm:
+  queue: "VM1"
+  timeout: "50" #sec
+  
+# Pagination Configuration  
+pagination:
+  limit: "3"
+app:
+  cutoffDate: "2026-05-01"  
+  
+us:
+  maxRetries: "3"
+  millisBetweenRetries:  "2000"
+  
+# Object Store Configuration
+os:
+  ttl: "10"  # min
+  timeout: "20" #sec
+  
+ 

@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:os="http://www.mulesoft.org/schema/mule/os"
+	xmlns:vm="http://www.mulesoft.org/schema/mule/vm" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd">
+	<flow name="get:\extract-employee:employee-db-system-api-config" doc:id="983e0b61-1ab5-49f8-9ccb-86744de00540" >
+		<ee:transform doc:name="Set Input Request and CorrelationId" doc:id="19a0e2af-ca14-49f4-b277-b0c866c1aa94">
+			<ee:message />
+			<ee:variables>
+				<ee:set-variable variableName="correlationId"><![CDATA[uuid()]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<logger level="INFO" doc:name="Start Logger" doc:id="6d67293a-da4f-43f6-91eb-73880838acad" message='#[%dw 2.0&#10;output application/json&#10;---&#10;{&#10;	"flowName": flow.name,&#10;	"timestamp": now() &gt;&gt; "UTC",&#10;	"correlationId": vars.correlationId,&#10;	&#10;}]' />
+		<flow-ref doc:name="extract-employees-paginated-flow" doc:id="ab08bda1-071f-43b9-bc73-a3efc06e31cb" name="extract-employees-paginated-flow"/>
+		<ee:transform doc:name="Response" doc:id="e0bfccf2-61e8-42c6-bb33-fda8f55d4201">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    "status": "Success",
+    "recordsProcessed": sizeOf(vars.accumulator),
+    "message": "File written successfully matching criteria."
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Response Logger" doc:id="d3fb82fc-7d3d-4864-bf03-a9dcd805683e" message='#[%dw 2.0&#10;output application/json&#10;---&#10;{&#10;	"flowName": flow.name,&#10;	"timestamp": now() &gt;&gt; "UTC",&#10;	"correlationId": vars.correlationId,&#10;	"status": payload,&#10;	&#10;}]' />
+	</flow>
+	<sub-flow name="extract-employees-paginated-flow" doc:id="0359c3ff-e2dd-4069-80a5-d6c57f568207" >
+		<ee:transform doc:name="Initialize Pagination Variables" doc:id="7138bf0c-3467-4660-965b-08741ca893a9" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="limit" ><![CDATA[Mule::p('pagination.limit') as Number]]></ee:set-variable>
+				<ee:set-variable variableName="offset" ><![CDATA[0]]></ee:set-variable>
+				<ee:set-variable variableName="hasMoreData" ><![CDATA['true']]></ee:set-variable>
+				<ee:set-variable variableName="accumulator" ><![CDATA[[]]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<logger level="INFO" doc:name="Log Pagination Parameters" doc:id="05b3d3c3-d2ba-4825-903a-235c3a7c9941" message='#[%dw 2.0&#10;output application/json&#10;---&#10;{&#10;	"flowName": flow.name,&#10;	"timestamp": now() &gt;&gt; "UTC",&#10;	"correlationId": vars.correlationId,&#10;	"limit" : vars.limit,&#10;	"offset" : vars.offset&#10;	&#10;}]' />
+		<try doc:name="Try" doc:id="d1c7b9f3-b145-4151-a71e-583b2c0fb0cb" >
+			<until-successful maxRetries="${us.maxRetries}" doc:name="Until Successful" doc:id="70f70273-a51a-4a0e-a649-c9d6d1b2f1e4" millisBetweenRetries="${us.millisBetweenRetries}">
+				<db:select doc:name="Get Total Employee Count" doc:id="7a4225d1-8814-4c5f-a78f-63bac103e7db" config-ref="Database_Config">
+			<db:sql><![CDATA[SELECT COUNT(*) as total FROM first_project.employee
+]]></db:sql>
+		</db:select>
+		</until-successful>
+			<error-handler >
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="00f9947f-f0b7-4862-aed5-25c71c9c9217" type="MULE:RETRY_EXHAUSTED">
+					<ee:transform doc:name="Transform Message" doc:id="0aa47e7d-b4f9-4cd5-97c8-6de5e4502b5c" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+
+var resolvedErrorType =
+    if ((error.suppressedErrors.errorType[0] default null) != null)
+        error.suppressedErrors.errorType[0].namespace ++ ":" ++ error.suppressedErrors.errorType[0].identifier
+    else
+        error.errorType.namespace ++ ":" ++ error.errorType.identifier
+
+---
+{
+  status: "FAILED",
+  errorType: resolvedErrorType,
+  message:
+    if (resolvedErrorType == "DB:CONNECTIVITY") "Database connectivity failed"
+    else if (resolvedErrorType == "DB:BAD_SQL_SYNTAX") "Invalid SQL syntax"
+    else if (resolvedErrorType == "DB:QUERY_EXECUTION") "Database query execution failed"
+    else "Unknown error",
+  timestamp: now() as String
+}]]></ee:set-payload>
+						</ee:message>
+						<ee:variables >
+						</ee:variables>
+					</ee:transform>
+				</on-error-propagate>
+			</error-handler>
+		</try>
+		<ee:transform doc:name="Generate Page Array" doc:id="1c1f8218-1efc-40fe-930e-f1339a22a5d4" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+var totalRecords = (payload[0].total default 0) as Number
+var limit = (vars.limit default 1) as Number
+var totalPages = ceil(totalRecords / limit) as Number
+---
+if (totalPages > 0) (0 to (totalPages - 1)) else []
+]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<foreach doc:name="For Each Page" doc:id="395cfa0f-f485-4ba4-9ac0-171d0c51b0d7" >
+			<set-variable value="#[payload * vars.limit]" doc:name="currentOffset" doc:id="ea87b37c-9329-493b-bdf5-433ea444c206" variableName="currentOffset"/>
+			<logger level="INFO" doc:name="Log Current Offset" doc:id="e7cdc4cf-3c4e-41b0-b318-1830a9d524fc" message='#[%dw 2.0&#10;output application/json&#10;---&#10;{&#10;	"timestamp": now() &gt;&gt; "UTC",&#10;	"correlationId": vars.correlationId,&#10;	"currentOffset" : vars.currentOffset&#10;	&#10;}]'/>
+			<try doc:name="Try" doc:id="90630269-455e-486a-9c53-3c2e697f728a" >
+				<until-successful maxRetries="${us.maxRetries}" doc:name="Until Successful" doc:id="0cc7b1af-fe65-4928-8a5a-cc8eec07d66b" millisBetweenRetries="${us.millisBetweenRetries}">
+				<db:select doc:name="Retrieve Employee Records" doc:id="121abd75-e3f1-44c4-b156-191675a76dc6" config-ref="Database_Config">
+			<db:sql><![CDATA[SELECT first_name, last_name, date_of_joining, email_id 
+FROM first_project.employee 
+LIMIT :limit OFFSET :offset]]></db:sql>
+			<db:input-parameters><![CDATA[#[{
+    'offset' : vars.currentOffset as Number,
+    'limit' : vars.limit as Number
+}]]]></db:input-parameters>
+		</db:select>
+			</until-successful>
+				<error-handler >
+					<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="743a838a-8ed4-49f0-81d7-af0d0acad6ff" type="MULE:RETRY_EXHAUSTED" >
+						<ee:transform doc:name="Transform Message" doc:id="eaef05cf-f79d-49ca-8973-dd3442644908" >
+							<ee:message >
+								<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+
+var resolvedErrorType =
+    if ((error.suppressedErrors.errorType[0] default null) != null)
+        error.suppressedErrors.errorType[0].namespace ++ ":" ++ error.suppressedErrors.errorType[0].identifier
+    else
+        error.errorType.namespace ++ ":" ++ error.errorType.identifier
+
+---
+{
+  status: "FAILED",
+  errorType: resolvedErrorType,
+  message:
+    if (resolvedErrorType == "DB:CONNECTIVITY") "Database connectivity failed"
+    else if (resolvedErrorType == "DB:BAD_SQL_SYNTAX") "Invalid SQL syntax"
+    else if (resolvedErrorType == "DB:QUERY_EXECUTION") "Database query execution failed"
+    else "Unknown error",
+  timestamp: now() as String
+}]]></ee:set-payload>
+							</ee:message>
+							<ee:variables />
+						</ee:transform>
+					</on-error-propagate>
+				</error-handler>
+			</try>
+			<logger level="INFO" doc:name="Logger" doc:id="504dde3d-8903-4576-bacc-f72fd4474499" message='Output from each iteration : #[payload]'/>
+			<ee:transform doc:name='Transform Contract &amp; Accumulate"' doc:id="fe1a6774-71bd-4590-969a-e538ccfdfbe7" >
+				<ee:message >
+				</ee:message>
+				<ee:variables >
+					<ee:set-variable variableName="accumulator" ><![CDATA[%dw 2.0
+output application/java
+
+var cutOffDate = |2026-05-03|
+
+var transformedBatch = (payload default []) map (employee) -> {
+    "Name": trim((employee.first_name default "") ++ " " ++ (employee.last_name default "")),
+    "DOJ": if (employee.date_of_joining != null) (employee.date_of_joining as Date {format: "yyyy-MM-dd"}) else null,
+    "Email ID": if (!isEmpty(employee.email_id)) employee.email_id else "N/A"
+}
+
+var filteredBatch = transformedBatch filter ((item) -> 
+    item.DOJ != null and (item.DOJ > cutOffDate)
+)
+
+---
+
+vars.accumulator ++ (filteredBatch map (item) -> {
+    "FullName": item.Name,
+    "DOJ": item.DOJ as String {format: "dd-MM-yyyy"},
+    "Email ID": item."Email ID"
+})]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+			<logger level="INFO" doc:name="Response Logger" doc:id="b48138ee-5f9d-412c-9ce5-adc6a0aab596" message="#[vars.accumulator]"/>
+		</foreach>
+		<set-payload value="#[%dw 2.0&#10;output application/csv header=true&#10;---&#10;vars.accumulator]" doc:name="Generate Final CSV Payload" doc:id="83e4bb9d-75d0-404d-9c6b-bebe18c3fb5e" />
+		<file:write doc:name="Write" doc:id="6288a333-9461-49f1-894b-6bd35fa4eee4" path="C:\Users\psorapur\Documents\Employee Details\Incoming\employees_after_may.csv"/>
+	</sub-flow>
+</mule>

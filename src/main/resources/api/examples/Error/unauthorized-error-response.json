@@ -1,0 +1,9 @@
+{
+
+  "status": "Failed",
+  "statusCode": 401,
+  "eventId": "982390eu92rhdfo02380",
+  "externalId": "123456210829Abhi",
+  "errorType": "HTTP:UNAUTHORIZED",
+  "errorDescription": "Unable to login"
+}
