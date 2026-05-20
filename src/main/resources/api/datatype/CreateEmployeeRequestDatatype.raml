@@ -1,0 +1,29 @@
+#%RAML 1.0 DataType 
+type: array
+items:
+  type: object
+  properties:
+    firstName:
+      type: string
+      example: Michael
+      required: false
+    lastName:
+      type: string
+      example: Brown
+      required: false
+    empId:
+      type: string
+      example: EMP10251
+      required: false
+    emailId:
+      type: string
+      example: michael.brown@deloitte.com
+      required: false
+    dateOfJoining:
+      type: date-only
+      example: '2026-06-10'
+      required: false
+    address:
+      type: string
+      example: 78 Residency Road, Hyderabad
+      required: false

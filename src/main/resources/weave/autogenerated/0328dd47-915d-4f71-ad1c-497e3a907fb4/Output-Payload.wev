@@ -1,0 +1,13 @@
+%dw 2.0
+
+type auto_0328dd47_915d_4f71_ad1c_497e3a907fb4_Output_Payload = {|
+  transactionId: String, 
+  application: String, 
+  layer: String, 
+  dateTime: String {"format": "yyyy-MM-dd'T'HH:mm:ss'Z'"}, 
+  httpStatusCode: Null, 
+  message: String | Null, 
+  errorType: Null, 
+  description: String | Null
+|}
+

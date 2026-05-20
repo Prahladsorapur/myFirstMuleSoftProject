@@ -1,0 +1,51 @@
+
+[
+  {
+    "firstName": "Michael",
+    "lastName": "Brown",
+    "empId": "EMP10251",
+    "emailId": "michael.brown@deloitte.com",
+    "dateOfJoining": "2026-06-10",
+    "address": "78 Residency Road, Hyderabad"
+  },
+  {
+    "firstName": "Emily",
+    "lastName": "Davis",
+    "empId": "EMP10252",
+    "emailId": "emily.davis@deloitte.com",
+    "dateOfJoining": "2026-05-02",
+    "address": "22 MG Road, Pune"
+  },
+  {
+    "firstName": "Robert",
+    "lastName": "Wilson",
+    "empId": "EMP10253",
+    "emailId": "robert.wilson@deloitte.com",
+    "dateOfJoining": "2026-03-18",
+    "address": "11 Brigade Road, Chennai"
+  },
+  {
+    "firstName": "Sophia",
+    "lastName": "Taylor",
+    "empId": "EMP10254",
+    "emailId": "sophia.taylor@deloitte.com",
+    "dateOfJoining": "2026-07-01",
+    "address": "90 Sector 21, Gurugram"
+  },
+  {
+    "firstName": "David",
+    "lastName": "Anderson",
+    "empId": "EMP10255",
+    "emailId": "david.anderson@deloitte.com",
+    "dateOfJoining": "2026-05-25",
+    "address": "16 Salt Lake, Kolkata"
+  },
+  {
+    "firstName": "Olivia",
+    "lastName": "Thomas",
+    "empId": "EMP10256",
+    "emailId": "olivia.thomas@deloitte.com",
+    "dateOfJoining": "2026-02-14",
+    "address": "5 Banjara Hills, Hyderabad"
+  }
+]

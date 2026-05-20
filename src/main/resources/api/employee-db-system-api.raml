@@ -1,0 +1,88 @@
+#%RAML 1.0
+title: employee-db-system-api
+baseUri: /api
+mediaType:
+  - application/json
+protocols:
+  - HTTP
+
+documentation:
+  - title: Overview
+    content: |
+      The Employee System API manages employee records in a backend database.
+      It supports:
+      1. Creating a new employee
+      2. Updating an existing employee
+      3. Retrieving employees with offset-based pagination
+      4. Exporting employees whose date of joining is after a given date
+
+  - title: Pagination Strategy
+    content: |
+      This API uses offset-based pagination because it is simple and well-suited
+      for relational database queries using LIMIT and OFFSET.
+      Query parameters:
+      - offset: Number of records to skip
+      - limit: Maximum number of records to return        
+
+types:
+  createEmployeeRequest: !include datatype/CreateEmployeeRequestDatatype.raml
+  updateEmployeeRequest: !include datatype/UpdateEmployeeRequestDatatype.raml
+  CreateRecordResponse: !include datatype/CreateRecordResponseDatatype.raml
+  UpdateRecordResponse: !include datatype/UpdateRecordResponseDatatype.raml
+  EmployeeList: !include datatype/EmployeeListDatatype.raml
+
+traits:
+  correlation-id-header: !include traits/x-correlation-id-header.raml
+
+/create-employee:
+  post:
+    description: Create a new employee record in the database
+    is: [correlation-id-header]
+    responses:
+      200:
+        body:
+          application/json:
+            type: CreateRecordResponse
+            example: !include examples/responses/create-response.json
+
+/update-employee/{empId}:
+  uriParameters:
+    empId:
+      type: string
+      description: Unique employee identifier.
+      example: EMP10249
+  patch:
+    description: Update only the provided fields of an existing employee record.
+    body:
+      application/json: 
+        type: updateEmployeeRequest
+        example: !include examples/request/update-employee-details.json
+    responses:
+      200:
+        description: Employee updated successfully.
+        body:
+          application/json:
+            type: UpdateRecordResponse
+            example: !include examples/responses/update-response.json
+
+/extract-employee:
+  get:
+    description: Retrieve all employee records as an array of employee objects.
+    queryParameters:
+      offset:
+        type: integer
+        required: false
+        default: 0
+        description: Number of records to skip.
+      limit:
+        type: integer
+        required: false
+        default: 10
+        description: Maximum number of records to return.
+    responses:
+      200:
+        description: Employee records retrieved successfully.
+        body:
+          application/json:
+            type: EmployeeList
+            example: !include examples/request/create-employee-details.json

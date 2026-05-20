@@ -1,0 +1,13 @@
+{
+  "main": "employee-db-system-api.raml",
+  "name": "employee-db-system-api",
+  "groupId": "c1d0f106-6dda-49a3-a562-79d6dfeee5ad",
+  "assetId": "employee-db-system-api",
+  "version": "1.0.2",
+  "classifier": "raml",
+  "tags": [],
+  "descriptorVersion": "1.0.0",
+  "organizationId": "c1d0f106-6dda-49a3-a562-79d6dfeee5ad",
+  "apiVersion": "v1",
+  "originalFormatVersion": "1.0"
+}

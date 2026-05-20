@@ -1,0 +1,18 @@
+[
+  {
+    "firstName": "John",
+    "lastName": "Doe",
+    "empId": "EMP10249",
+    "emailId": "john.doe@deloitte.com",
+    "dateOfJoining": "2026-05-15",
+    "address": "123 Main St, Bengaluru"
+  },
+  {
+    "firstName": "Jane",
+    "lastName": "Smith",
+    "empId": "EMP10250",
+    "emailId": "jane.smith@deloitte.com",
+    "dateOfJoining": "2026-04-20",
+    "address": "45 Park Avenue, Mumbai"
+  }
+]  
